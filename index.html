@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Réputation JDR</title>
+  <link href="https://fonts.googleapis.com/css2?family=UnifrakturCook:wght@700&family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --notion-bg: #ffffff;
+      --notion-text: #111111;
+      --switch-bg: #e4e4e4;
+      --master-block-bg: rgba(0,0,0,0.65); /* Opacité réduite en mode clair */
+    }
+
+    .dark-mode {
+      --notion-bg: #191919 !important;
+      --notion-text: #efefef !important;
+      --switch-bg: #373737 !important;
+      --master-block-bg: rgba(0,0,0,0.85) !important; /* Plus sombre en mode sombre */
+    }
+
+    * { box-sizing: border-box; }
+    
+    body { 
+      margin: 0; 
+      padding: 5px; 
+      background: transparent; 
+      overflow: hidden; 
+      font-family: 'Inter', sans-serif; 
+    }
+    
+    #reputation-widget {
+      width: 100%; 
+      height: calc(100vh - 10px); 
+      padding: 20px;
+      text-align: center; 
+      background-color: var(--notion-bg); 
+      color: var(--notion-text);
+      border-radius: 24px; 
+      transition: all 0.4s ease;
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      z-index: 1;
+    }
+
+    #color-layer {
+      position: absolute; 
+      top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; 
+      border-radius: 24px; 
+      z-index: 0;
+      transition: background-color 0.5s ease;
+    }
+
+    #widget-content { 
+      position: relative; 
+      z-index: 10; 
+      width: 100%; 
+      max-width: 800px; 
+    }
+
+    .char-name-input {
+      background: transparent; 
+      border: none; 
+      border-bottom: 2px solid rgba(125,125,125,0.2);
+      color: var(--notion-text); 
+      text-align: center; 
+      font-size: 1rem; 
+      font-weight: 800;
+      padding: 10px; 
+      margin-bottom: 15px; 
+      width: 280px; 
+      outline: none; 
+      text-transform: capitalize; 
+    }
+
+    .switch-container {
+      position: absolute; 
+      top: 15px; 
+      left: 20px;
+      display: flex; 
+      align-items: center; 
+      gap: 10px;
+      font-size: 10px; 
+      font-weight: 800; 
+      opacity: 0.8; 
+      color: var(--notion-text);
+      z-index: 100;
+    }
+    
+    .switch { 
+      position: relative; 
+      display: inline-block; 
+      width: 38px; 
+      height: 20px; 
+      cursor: pointer; 
+    }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; 
+      cursor: pointer; 
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--switch-bg); 
+      transition: .4s; 
+      border-radius: 20px;
+      display: flex; 
+      align-items: center; 
+      justify-content: space-between; 
+      padding: 0 5px;
+    }
+    .slider:before {
+      position: absolute; 
+      content: ""; 
+      height: 14px; 
+      width: 14px; 
+      left: 3px; 
+      bottom: 3px;
+      background-color: white; 
+      transition: .4s; 
+      border-radius: 50%;
+    }
+    input:checked + .slider { background-color: #2383e2; }
+    input:checked + .slider:before { transform: translateX(18px); }
+
+    .emoji-header { 
+      display: flex; 
+      justify-content: space-between; 
+      width: 92%; 
+      margin: 0 auto 10px; 
+      font-size: 24px; 
+    }
+
+    input[type=range] { 
+      -webkit-appearance: none; 
+      width: 92%; 
+      background: rgba(125,125,125,0.2); 
+      height: 6px; 
+      border-radius: 10px; 
+      outline: none; 
+      margin-bottom: 10px; 
+      cursor: pointer; 
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; 
+      height: 36px; 
+      width: 36px;
+      background-image: var(--star-icon); 
+      background-repeat: no-repeat; 
+      background-position: center;
+      border: none; 
+      filter: drop-shadow(0 3px 5px rgba(0,0,0,0.2));
+    }
+
+    #val-badge { font-weight: 900; font-size: 1.5rem; margin-top: 15px; margin-bottom: 20px; }
+    h2 { margin: 0 0 10px 0; font-family: 'UnifrakturCook', serif; font-size: 2.8rem; line-height: 1; }
+    .rank-subtitle { font-size: 0.7rem; opacity: 0.6; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 3px; }
+
+    /* Bloc Effets (Style sombre permanent) */
+    .master-info-block { 
+      background: var(--master-block-bg); 
+      border-radius: 22px; 
+      padding: 22px 18px; 
+      width: 100%;
+      color: #ffffff !important;
+      transition: background 0.4s ease;
+      box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    }
+    .grid-container { 
+      display: grid; 
+      grid-template-columns: repeat(3, 1fr); 
+      gap: 15px; 
+    }
+    
+    .category-title { 
+      font-size: 0.7rem; 
+      text-transform: uppercase; 
+      letter-spacing: 2.5px; 
+      font-weight: 900; 
+      margin-bottom: 12px; 
+      color: #ffffff !important; /* Blanc pur */
+    }
+    
+    .info-sub-card { 
+      background: rgba(255,255,255,0.08); 
+      padding: 12px; 
+      border-radius: 14px; 
+      min-height: 70px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      border: none !important; /* Pas de contours */
+    }
+    
+    .info-sub-card p { 
+      margin: 0; 
+      font-size: 0.82rem; 
+      line-height: 1.4; 
+      font-weight: 500; 
+      color: #ffffff !important; 
+    }
+
+    @media (max-width: 650px) { .grid-container { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+<div id="reputation-widget">
+  <div id="color-layer"></div>
+  
+  <div class="switch-container">
+    <label class="switch">
+      <input type="checkbox" id="mode-checkbox">
+      <span class="slider"><span>🌙</span><span>☀️</span></span>
+    </label>
+    <span>MODE</span>
+  </div>
+
+  <div id="widget-content">
+    <input type="text" id="char-name" class="char-name-input" placeholder="Nom du Personnage">
+    
+    <div class="emoji-header"><span>😈</span><span>🐣</span><span>😇</span></div>
+    <input type="range" id="gauge" min="-100" max="100" value="0">
+    <div id="val-badge">0</div>
+    <h2 id="rank">Inconnu au bataillon</h2>
+    <div class="rank-subtitle">Statut de la Réputation</div>
+    
+    <div class="master-info-block">
+      <div class="grid-container">
+        <div class="category-group">
+          <div class="category-title">Mécanique</div>
+          <div class="info-sub-card"><p id="meca">-</p></div>
+        </div>
+        <div class="category-group">
+          <div class="category-title">Bonus / Malus</div>
+          <div class="info-sub-card"><p id="malus">-</p></div>
+        </div>
+        <div class="category-group">
+          <div class="category-title">En Jeu</div>
+          <div class="info-sub-card"><p id="special">-</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// PenID pour stocker localement les données par URL
+const penID = btoa(window.location.href).substring(0, 12);
+
+// Base de données
+const data = {"-100":["Légende noire","Aucun bonus","PNJ hostiles, prix doublés, ville interdite","Lieux secrets ennemis, traqué"],"-90":["Infâme","+1 intimidation","Hostilité, rumeurs négatives","Guildes fermées, échec illusions"],"-80":["Très mal vu","-1 Charisme","Méfiance, marchandage difficile","PNJ refusent aide"],"-70":["Détesté","-1 perception sociale","Rumeurs fausses ou diffamatoires","Alliés hésitants"],"-60":["Mauvais renom","Aucun","Certains lieux fermés","PNJ neutres méfiants"],"-50":["Mauvaise réputation","-1 persuasion","Barrières sociales","Créatures hostiles précoces"],"-40":["Reproché","Aucun","Infos difficiles à obtenir","Certains commerces refusent"],"-30":["Mal perçu","-1 Charisme","PNJ méfiants","Quelques lieux fermés"],"-20":["Plutôt mal vu","Aucun","Interaction difficile","Accès limité aux quêtes"],"-10":["Légèrement connu (-)","Aucun","Regards méfiants","Effet narratif faible"],"0":["Inconnu au bataillon","Aucun","Aucun effet particulier","Statut neutre"],"10":["Légèrement connu (+)","Aucun","Aucun","PNJ amicaux"],"20":["Plutôt bien vu","+1 jet de Charisme","Aucun","Accès à infos mineures"],"30":["Bien perçu","+1 persuasion","Aucun","PNJ coopératifs"],"40":["Réputé","Aucun","Aucun","Invitations événements"],"50":["Réputation positive","+1 perception sociale","Aucun","Accès privilégié services"],"60":["Très apprécié","+1 jet de Charisme","Aucun","Lieux sûrs, PNJ fiables"],"70":["Admiré","+2 persuasion","Aucun","Factions font confiance"],"80":["Héros local","+2 jet de Charisme","Aucun","Quêtes secondaires débloquées"],"90":["Légende vivante","+2 interactions sociales","Aucun","Lieux exclusifs ouverts"],"100":["Icône / Mythe","+3 persuasion et Charisme","Aucun","Lieux secrets, PNJ célèbres"]};
+
+const widget = document.getElementById('reputation-widget');
+const gauge = document.getElementById('gauge');
+const checkbox = document.getElementById('mode-checkbox');
+
+function updateWidget(val){
+  const t = parseInt(val); 
+  document.getElementById('val-badge').innerText = (t > 0 ? "+" : "") + t; 
+  gauge.value = t;
+  
+  let a = t > -10 && t < 10 ? 0 : 10 * Math.trunc(t / 10);
+  if(t === 100) a = 100; if(t === -100) a = -100;
+  
+  const n = (t + 100) * 0.6;
+  const colorSolid = `hsl(${n}, 95%, 45%)`; 
+  
+  document.getElementById('val-badge').style.color = colorSolid;
+  document.getElementById('color-layer').style.backgroundColor = `hsla(${n}, 95%, 45%, 0.25)`;
+  
+  const subCardColor = `hsla(${n}, 90%, 45%, 0.20)`;
+  document.querySelectorAll('.info-sub-card').forEach(card => {
+    card.style.backgroundColor = subCardColor;
+  });
+  
+  const starSVG = `url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${encodeURIComponent(colorSolid)}"><path d="M12 0L14.5 9.5L24 12L14.5 14.5L12 24L9.5 14.5L0 12L9.5 9.5L12 0Z"/></svg>')`;
+  widget.style.setProperty('--star-icon', starSVG);
+  
+  const s = data[a.toString()];
+  if(s){ 
+    document.getElementById('rank').innerText=s[0]; 
+    document.getElementById('meca').innerText=s[1]; 
+    document.getElementById('malus').innerText=s[2]; 
+    document.getElementById('special').innerText=s[3]; 
+  }
+  localStorage.setItem('rep_val_' + penID, t);
+}
+
+checkbox.addEventListener('change', () => {
+  if(checkbox.checked) {
+    widget.classList.add('dark-mode');
+    localStorage.setItem('rep_mode_' + penID, 'dark');
+  } else {
+    widget.classList.remove('dark-mode');
+    localStorage.setItem('rep_mode_' + penID, 'light');
+  }
+});
+
+gauge.addEventListener('input', (e) => updateWidget(e.target.value));
+
+document.getElementById('char-name').oninput = (e) => { 
+  localStorage.setItem('rep_name_' + penID, e.target.value); 
+};
+
+document.addEventListener("DOMContentLoaded", ()=>{
+  document.getElementById('char-name').value = localStorage.getItem('rep_name_' + penID) || "";
+  const savedVal = localStorage.getItem('rep_val_' + penID) || 0;
+  
+  if(localStorage.getItem('rep_mode_' + penID) === 'dark') {
+    checkbox.checked = true;
+    widget.classList.add('dark-mode');
+  }
+  updateWidget(savedVal);
+});
+</script>
+</body>
+</html>
